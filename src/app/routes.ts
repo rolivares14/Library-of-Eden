@@ -7,10 +7,15 @@ import { SignUpPage } from "./pages/SignUpPage";
 import { PirateIslePage } from "./pages/PirateIslePage";
 import { PirateBookDetailPage } from "./pages/PirateBookDetailPage";
 
+function HydrateFallback() {
+  return null;
+}
+
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: RootLayout,
+    HydrateFallback,
     children: [
       {
         index: true,
@@ -36,6 +41,7 @@ export const router = createBrowserRouter([
       const { EpubReaderPage } = await import("./pages/EpubReaderPage");
       return { Component: EpubReaderPage };
     },
+    HydrateFallback,
   },
   {
     path: "pirate/read/:id",
@@ -43,6 +49,7 @@ export const router = createBrowserRouter([
       const { PirateReaderPage } = await import("./pages/PirateReaderPage");
       return { Component: PirateReaderPage };
     },
+    HydrateFallback,
   },
   {
     path: "signin",

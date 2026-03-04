@@ -180,14 +180,15 @@ app.post("/make-server-31dd8e3b/progress", async (c) => {
   }
 
   try {
-    const { bookId, cfi, percentage } = await c.req.json();
+    const { bookId, cfi, tocIndex, scrollFraction } = await c.req.json();
     if (!bookId) {
       return c.json({ error: "bookId is required" }, 400);
     }
 
     await kv.set(`progress:${user.id}:${bookId}`, {
       cfi,
-      percentage,
+      tocIndex,
+      scrollFraction,
       updatedAt: new Date().toISOString(),
     });
 
@@ -209,10 +210,10 @@ app.get("/make-server-31dd8e3b/progress/:bookId", async (c) => {
   try {
     const bookId = c.req.param("bookId");
     const progress = await kv.get(`progress:${user.id}:${bookId}`);
-    return c.json(progress || { cfi: null, percentage: 0 });
+    return c.json(progress || { cfi: null });
   } catch (err: any) {
     console.log("Get progress error:", err.message);
-    return c.json({ cfi: null, percentage: 0 });
+    return c.json({ cfi: null });
   }
 });
 
@@ -230,6 +231,72 @@ app.get("/make-server-31dd8e3b/progress", async (c) => {
   } catch (err: any) {
     console.log("Get all progress error:", err.message);
     return c.json([]);
+  }
+});
+
+// ─── Bookmarks: Save (upsert — one bookmark per user+book) ──────
+
+app.post("/make-server-31dd8e3b/bookmark", async (c) => {
+  const user = await getAuthUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const { bookId, cfi, tocIndex, chapterLabel, percentage } = await c.req.json();
+    if (!bookId) {
+      return c.json({ error: "bookId is required" }, 400);
+    }
+
+    // Single kv.set — overwrites any existing bookmark for this user+book
+    await kv.set(`bookmark:${user.id}:${bookId}`, {
+      cfi,
+      tocIndex,
+      chapterLabel,
+      percentage,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.log("Save bookmark error:", err.message);
+    return c.json({ error: "Failed to save bookmark: " + err.message }, 500);
+  }
+});
+
+// ─── Bookmarks: Get for a book ───────────────────────────────────
+
+app.get("/make-server-31dd8e3b/bookmark/:bookId", async (c) => {
+  const user = await getAuthUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const bookId = c.req.param("bookId");
+    const bookmark = await kv.get(`bookmark:${user.id}:${bookId}`);
+    return c.json(bookmark || { cfi: null });
+  } catch (err: any) {
+    console.log("Get bookmark error:", err.message);
+    return c.json({ cfi: null });
+  }
+});
+
+// ─── Bookmarks: Delete ───────────────────────────────────────────
+
+app.delete("/make-server-31dd8e3b/bookmark/:bookId", async (c) => {
+  const user = await getAuthUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const bookId = c.req.param("bookId");
+    await kv.del(`bookmark:${user.id}:${bookId}`);
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.log("Delete bookmark error:", err.message);
+    return c.json({ error: "Failed to delete bookmark: " + err.message }, 500);
   }
 });
 

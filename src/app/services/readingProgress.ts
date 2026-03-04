@@ -1,9 +1,10 @@
 import { serverUrl } from "./supabaseClient";
 import { publicAnonKey } from "/utils/supabase/info";
 
-interface ReadingProgress {
+export interface ReadingProgress {
   cfi: string | null;
-  percentage: number;
+  tocIndex?: number;
+  scrollFraction?: number; // 0–1, how far scrolled within the chapter
   updatedAt?: string;
 }
 
@@ -14,14 +15,12 @@ const LOCAL_KEY_PREFIX = "reading-progress:";
  */
 export async function saveProgress(
   bookId: string,
-  cfi: string,
-  percentage: number,
+  progress: Omit<ReadingProgress, "updatedAt">,
   accessToken?: string | null
 ): Promise<void> {
   // Always save locally as immediate fallback
   const data: ReadingProgress = {
-    cfi,
-    percentage,
+    ...progress,
     updatedAt: new Date().toISOString(),
   };
   try {
@@ -38,7 +37,7 @@ export async function saveProgress(
           "X-User-Token": accessToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ bookId, cfi, percentage }),
+        body: JSON.stringify({ bookId, ...progress }),
       });
     } catch (err) {
       console.error("Failed to save progress to server:", err);
